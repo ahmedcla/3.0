@@ -10,22 +10,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Find and unzip the project
+      - name: Unzip the project
         run: |
-          set -e
-          PROJECT="$GITHUB_WORKSPACE"
-          if [ ! -f "$PROJECT/gradlew" ]; then
-            newest=""; newest_time=0
-            for z in *.zip; do
-              [ -f "$z" ] || continue
-              t=$(git log -1 --format=%ct -- "$z")
-              if [ "$t" -ge "$newest_time" ]; then newest="$z"; newest_time="$t"; fi
-            done
-            if [ -z "$newest" ]; then echo "No zip file or gradlew found in the repo"; exit 1; fi
-            echo "Using zip: $newest"
-            mkdir -p "$RUNNER_TEMP/project"
-            unzip -q -o "$newest" -d "$RUNNER_TEMP/project"
-            gradlew_path=$(find "$RUNNER_TEMP/project" -name grad
+          mkdir -p project
+          unzip -q -o '*.zip' -d project
+          find project -name gradlew -printf '%h\n' | head -n 1 > project_dir.txt
+          echo "PROJECT_DIR=$GITHUB_WORKSPACE/$(cat project_dir.txt)" >> "$GITHUB_ENV"
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Build
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build --no-daemon
+
+      - name: Upload the mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: elementalarsenal-jar
+          path: |
+            ${{ env.PROJECT_DIR }}/build/libs/*.jar
+            !${{ env.PROJECT_DIR }}/build/libs/*-sources.jar
