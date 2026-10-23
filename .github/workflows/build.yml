@@ -18,6 +18,9 @@ jobs:
           find project -name gradlew -printf '%h\n' | head -n 1 > project_dir.txt
           echo "PROJECT_DIR=$GITHUB_WORKSPACE/$(cat project_dir.txt)" >> "$GITHUB_ENV"
 
+      - name: Update Gradle version
+        run: sed -i 's/gradle-9.5.1-bin/gradle-9.7.0-bin/' "$PROJECT_DIR/gradle/wrapper/gradle-wrapper.properties"
+
       - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
